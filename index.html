@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Free Image to URL Converter</title>
+  <meta name="description" content="Upload a local image and get a shareable image URL for free using Cloudinary." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: rgba(255, 255, 255, 0.09);
+      --card-strong: rgba(255, 255, 255, 0.14);
+      --text: #ffffff;
+      --muted: #b8c0d9;
+      --accent: #7c3aed;
+      --accent-2: #06b6d4;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --border: rgba(255, 255, 255, 0.16);
+      --shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, 0.45), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(6, 182, 212, 0.35), transparent 32rem),
+        linear-gradient(135deg, #080b16, #101936 55%, #07111f);
+      overflow-x: hidden;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.08;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    }
+
+    .container {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-size: 1.1rem;
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 15px 35px rgba(124, 58, 237, 0.3);
+      font-size: 1.35rem;
+    }
+
+    .setup-btn, .ghost-btn, .primary-btn, .copy-btn {
+      border: 0;
+      border-radius: 999px;
+      color: var(--text);
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+
+    .setup-btn, .ghost-btn {
+      padding: 12px 18px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(18px);
+    }
+
+    .setup-btn:hover, .ghost-btn:hover, .primary-btn:hover, .copy-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .hero-copy h1 {
+      font-size: clamp(2.25rem, 5vw, 5rem);
+      line-height: 0.98;
+      letter-spacing: -0.07em;
+      margin: 0 0 20px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg, #fff, #b9e9ff, #d8c7ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-copy p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.75;
+      margin: 0 0 26px;
+      max-width: 610px;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .badge {
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #dce8ff;
+      font-size: .85rem;
+      font-weight: 600;
+    }
+
+    .upload-card, .result-card, .modal-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.07));
+      border: 1px solid var(--border);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+    }
+
+    .upload-card {
+      padding: 22px;
+    }
+
+    .drop-zone {
+      min-height: 360px;
+      border: 2px dashed rgba(255, 255, 255, 0.24);
+      border-radius: 26px;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.045);
+      transition: border-color .2s ease, background .2s ease, transform .2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .drop-zone.dragover {
+      border-color: #67e8f9;
+      background: rgba(6, 182, 212, 0.12);
+      transform: scale(1.01);
+    }
+
+    .upload-icon {
+      width: 94px;
+      height: 94px;
+      border-radius: 30px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, rgba(124, 58, 237, .9), rgba(6, 182, 212, .9));
+      font-size: 2.5rem;
+      box-shadow: 0 18px 40px rgba(6, 182, 212, 0.22);
+    }
+
+    .drop-zone h2 {
+      margin: 0 0 8px;
+      font-size: 1.35rem;
+      letter-spacing: -0.03em;
+    }
+
+    .drop-zone p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    input[type="file"] { display: none; }
+
+    .primary-btn {
+      padding: 14px 22px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 16px 34px rgba(124, 58, 237, 0.34);
+    }
+
+    .preview-wrap {
+      display: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .preview-wrap.active { display: block; }
+
+    .preview-img {
+      width: 100%;
+      max-height: 310px;
+      object-fit: contain;
+      border-radius: 22px;
+      background: rgba(0,0,0,.2);
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .file-info {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: .9rem;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .progress-box {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .progress-bar {
+      height: 11px;
+      background: rgba(255,255,255,.12);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width .18s ease;
+    }
+
+    .progress-text {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: .88rem;
+    }
+
+    .result-card {
+      display: none;
+      margin-top: 22px;
+      padding: 18px;
+    }
+
+    .result-card.active { display: block; }
+
+    .result-card h3 {
+      margin: 0 0 12px;
+      letter-spacing: -0.03em;
+    }
+
+    .url-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .url-input, .config-input {
+      width: 100%;
+      padding: 14px 15px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+    }
+
+    .copy-btn {
+      padding: 14px 18px;
+      background: var(--success);
+      white-space: nowrap;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(20px);
+      padding: 13px 18px;
+      background: rgba(12, 18, 35, .92);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text);
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s ease;
+      z-index: 50;
+      box-shadow: var(--shadow);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.error { border-color: rgba(239, 68, 68, .7); }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.62);
+      display: none;
+      place-items: center;
+      padding: 16px;
+      z-index: 40;
+    }
+
+    .modal.active { display: grid; }
+
+    .modal-card {
+      width: min(560px, 100%);
+      padding: 24px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .modal-header h2 {
+      margin: 0 0 6px;
+      letter-spacing: -0.04em;
+    }
+
+    .modal-header p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: .94rem;
+    }
+
+    .close-btn {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: .92rem;
+    }
+
+    .help {
+      color: var(--muted);
+      font-size: .84rem;
+      margin-top: 7px;
+      line-height: 1.5;
+    }
+
+    .error-text {
+      color: #fecaca;
+      background: rgba(239, 68, 68, .12);
+      border: 1px solid rgba(239, 68, 68, .35);
+      padding: 12px 14px;
+      border-radius: 16px;
+      margin-top: 14px;
+      display: none;
+      line-height: 1.5;
+    }
+
+    .steps {
+      margin-top: 32px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .step {
+      background: rgba(255,255,255,.07);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 18px;
+    }
+
+    .step span {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.12);
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .step h3 { margin: 0 0 7px; }
+    .step p { margin: 0; color: var(--muted); line-height: 1.6; font-size: .92rem; }
+
+    footer {
+      margin-top: 40px;
+      color: rgba(255,255,255,.55);
+      text-align: center;
+      font-size: .9rem;
+    }
+
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-copy { text-align: center; }
+      .hero-copy p { margin-left: auto; margin-right: auto; }
+      .badges { justify-content: center; }
+      .steps { grid-template-columns: 1fr; }
+      header { margin-bottom: 34px; }
+    }
+
+    @media (max-width: 540px) {
+      .container { width: min(100% - 22px, 1120px); padding-top: 18px; }
+      header { align-items: start; }
+      .brand span { display: none; }
+      .drop-zone { min-height: 315px; }
+      .url-row { flex-direction: column; align-items: stretch; }
+      .copy-btn { width: 100%; }
+      .hero-copy h1 { font-size: 2.45rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <main class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">🔗</div>
+        <span>Image URL Maker</span>
+      </div>
+      <button class="setup-btn" id="openSettings">Cloudinary Setup</button>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Convert local image into a <span class="gradient-text">shareable URL</span></h1>
+        <p>Select an image from your laptop or phone, upload it to your Cloudinary account, and instantly copy the public image link.</p>
+        <div class="badges">
+          <div class="badge">Cloud name pre-filled</div>
+          <div class="badge">Free hosting supported</div>
+          <div class="badge">Copy direct URL</div>
+        </div>
+      </div>
+
+      <div class="upload-card">
+        <div class="drop-zone" id="dropZone">
+          <div id="emptyState">
+            <div class="upload-icon">☁️</div>
+            <h2>Drop image here</h2>
+            <p>or choose JPG, PNG, WEBP, GIF from your device.</p>
+            <button class="primary-btn" id="chooseBtn">Choose Image</button>
+          </div>
+
+          <div class="preview-wrap" id="previewWrap">
+            <img id="previewImg" class="preview-img" alt="Selected image preview" />
+            <div class="file-info">
+              <span id="fileName">No file selected</span>
+              <span id="fileSize"></span>
+            </div>
+            <div class="actions">
+              <button class="primary-btn" id="uploadBtn">Upload & Generate URL</button>
+              <button class="ghost-btn" id="changeBtn">Change Image</button>
+            </div>
+            <div class="progress-box" id="progressBox">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <div class="progress-text" id="progressText">Uploading...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-card" id="resultCard">
+          <h3>✅ Your image URL is ready</h3>
+          <div class="url-row">
+            <input class="url-input" id="resultUrl" readonly />
+            <button class="copy-btn" id="copyBtn">Copy URL</button>
+          </div>
+        </div>
+
+        <div class="error-text" id="errorText"></div>
+      </div>
+    </section>
+
+    <section class="steps">
+      <div class="step">
+        <span>1</span>
+        <h3>Create account</h3>
+        <p>Your Cloudinary cloud name is already pre-filled in this website.</p>
+      </div>
+      <div class="step">
+        <span>2</span>
+        <h3>Unsigned preset</h3>
+        <p>Create an unsigned upload preset from Cloudinary settings.</p>
+      </div>
+      <div class="step">
+        <span>3</span>
+        <h3>Upload image</h3>
+        <p>Add your unsigned upload preset once, upload image, and copy the URL.</p>
+      </div>
+    </section>
+
+    <footer>
+      Made for free image URL conversion. Do not upload private or sensitive photos to a public URL.
+    </footer>
+  </main>
+
+  <div class="modal" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>Cloudinary Setup</h2>
+          <p>Your Cloudinary cloud name is already added. Enter only your unsigned upload preset. This website never stores or exposes your API secret.</p>
+        </div>
+        <button class="close-btn" id="closeSettings">×</button>
+      </div>
+
+      <div class="form-group">
+        <label for="cloudName">Cloud Name</label>
+        <input class="config-input" id="cloudName" value="dlyzi2ma" readonly autocomplete="off" />
+        <div class="help">Cloud name is pre-filled: dlyzi2ma.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="uploadPreset">Unsigned Upload Preset</label>
+        <input class="config-input" id="uploadPreset" placeholder="example: image_uploads" autocomplete="off" />
+        <div class="help">Settings → Upload → Add upload preset → Signing mode: Unsigned.</div>
+      </div>
+
+      <button class="primary-btn" id="saveSettings">Save Setup</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <input type="file" id="fileInput" accept="image/*" />
+
+  <script>
+    const CONFIG_KEY = "image-url-maker-cloudinary-config";
+    const DEFAULT_CLOUD_NAME = "dlyzi2ma";
+
+    const elements = {
+      openSettings: document.getElementById("openSettings"),
+      closeSettings: document.getElementById("closeSettings"),
+      settingsModal: document.getElementById("settingsModal"),
+      cloudName: document.getElementById("cloudName"),
+      uploadPreset: document.getElementById("uploadPreset"),
+      saveSettings: document.getElementById("saveSettings"),
+      fileInput: document.getElementById("fileInput"),
+      chooseBtn: document.getElementById("chooseBtn"),
+      changeBtn: document.getElementById("changeBtn"),
+      uploadBtn: document.getElementById("uploadBtn"),
+      copyBtn: document.getElementById("copyBtn"),
+      dropZone: document.getElementById("dropZone"),
+      emptyState: document.getElementById("emptyState"),
+      previewWrap: document.getElementById("previewWrap"),
+      previewImg: document.getElementById("previewImg"),
+      fileName: document.getElementById("fileName"),
+      fileSize: document.getElementById("fileSize"),
+      progressBox: document.getElementById("progressBox"),
+      progressFill: document.getElementById("progressFill"),
+      progressText: document.getElementById("progressText"),
+      resultCard: document.getElementById("resultCard"),
+      resultUrl: document.getElementById("resultUrl"),
+      errorText: document.getElementById("errorText"),
+      toast: document.getElementById("toast"),
+    };
+
+    let selectedFile = null;
+
+    function getConfig() {
+      try {
+        const savedConfig = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
+        return { cloudName: DEFAULT_CLOUD_NAME, ...savedConfig };
+      } catch {
+        return { cloudName: DEFAULT_CLOUD_NAME };
+      }
+    }
+
+    function saveConfig(config) {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    }
+
+    function loadConfigIntoForm() {
+      const config = getConfig();
+      elements.cloudName.value = config.cloudName || "";
+      elements.uploadPreset.value = config.uploadPreset || "";
+    }
+
+    function openModal() {
+      loadConfigIntoForm();
+      elements.settingsModal.classList.add("active");
+    }
+
+    function closeModal() {
+      elements.settingsModal.classList.remove("active");
+    }
+
+    function showToast(message, isError = false) {
+      elements.toast.textContent = message;
+      elements.toast.classList.toggle("error", isError);
+      elements.toast.classList.add("show");
+      setTimeout(() => elements.toast.classList.remove("show"), 2600);
+    }
+
+    function showError(message) {
+      elements.errorText.textContent = message;
+      elements.errorText.style.display = "block";
+      showToast(message, true);
+    }
+
+    function clearError() {
+      elements.errorText.textContent = "";
+      elements.errorText.style.display = "none";
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return "0 Bytes";
+      const sizes = ["Bytes", "KB", "MB", "GB"];
+      const index = Math.floor(Math.log(bytes) / Math.log(1024));
+      return `${(bytes / Math.pow(1024, index)).toFixed(2)} ${sizes[index]}`;
+    }
+
+    function setProgress(percent, text) {
+      elements.progressBox.style.display = "block";
+      elements.progressFill.style.width = `${percent}%`;
+      elements.progressText.textContent = text || `${percent}% uploaded`;
+    }
+
+    function resetProgress() {
+      elements.progressBox.style.display = "none";
+      elements.progressFill.style.width = "0%";
+      elements.progressText.textContent = "Uploading...";
+    }
+
+    function handleFile(file) {
+      clearError();
+      elements.resultCard.classList.remove("active");
+
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        showError("Please select a valid image file.");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showError("Image is too large. Please upload an image under 10 MB.");
+        return;
+      }
+
+      selectedFile = file;
+      elements.emptyState.style.display = "none";
+      elements.previewWrap.classList.add("active");
+      elements.fileName.textContent = file.name;
+      elements.fileSize.textContent = formatBytes(file.size);
+      elements.previewImg.src = URL.createObjectURL(file);
+      resetProgress();
+    }
+
+    function uploadImage() {
+      clearError();
+      const { cloudName, uploadPreset } = getConfig();
+
+      if (!cloudName || !uploadPreset) {
+        openModal();
+        showError("Add your unsigned upload preset first.");
+        return;
+      }
+
+      if (!selectedFile) {
+        showError("Please choose an image first.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("upload_preset", uploadPreset);
+      formData.append("folder", "image-url-maker");
+
+      const xhr = new XMLHttpRequest();
+      const endpoint = `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/image/upload`;
+      xhr.open("POST", endpoint);
+
+      elements.uploadBtn.disabled = true;
+      elements.uploadBtn.textContent = "Uploading...";
+      setProgress(1, "Starting upload...");
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setProgress(percent, `${percent}% uploaded`);
+        }
+      };
+
+      xhr.onload = () => {
+        elements.uploadBtn.disabled = false;
+        elements.uploadBtn.textContent = "Upload & Generate URL";
+
+        let response = {};
+        try { response = JSON.parse(xhr.responseText); } catch {}
+
+        if (xhr.status >= 200 && xhr.status < 300 && response.secure_url) {
+          setProgress(100, "Upload complete");
+          elements.resultUrl.value = response.secure_url;
+          elements.resultCard.classList.add("active");
+          showToast("Image URL generated successfully");
+        } else {
+          resetProgress();
+          const apiMessage = response?.error?.message || "Upload failed. Check your unsigned upload preset.";
+          showError(apiMessage);
+        }
+      };
+
+      xhr.onerror = () => {
+        elements.uploadBtn.disabled = false;
+        elements.uploadBtn.textContent = "Upload & Generate URL";
+        resetProgress();
+        showError("Network error. Please check your internet connection and try again.");
+      };
+
+      xhr.send(formData);
+    }
+
+    async function copyUrl() {
+      const url = elements.resultUrl.value;
+      if (!url) return;
+
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast("URL copied");
+      } catch {
+        elements.resultUrl.select();
+        document.execCommand("copy");
+        showToast("URL copied");
+      }
+    }
+
+    elements.openSettings.addEventListener("click", openModal);
+    elements.closeSettings.addEventListener("click", closeModal);
+    elements.settingsModal.addEventListener("click", (event) => {
+      if (event.target === elements.settingsModal) closeModal();
+    });
+
+    elements.saveSettings.addEventListener("click", () => {
+      const cloudName = DEFAULT_CLOUD_NAME;
+      const uploadPreset = elements.uploadPreset.value.trim();
+
+      if (!uploadPreset) {
+        showToast("Fill the unsigned upload preset field", true);
+        return;
+      }
+
+      saveConfig({ cloudName, uploadPreset });
+      closeModal();
+      clearError();
+      showToast("Setup saved");
+    });
+
+    elements.chooseBtn.addEventListener("click", () => elements.fileInput.click());
+    elements.changeBtn.addEventListener("click", () => elements.fileInput.click());
+    elements.fileInput.addEventListener("change", (event) => handleFile(event.target.files[0]));
+    elements.uploadBtn.addEventListener("click", uploadImage);
+    elements.copyBtn.addEventListener("click", copyUrl);
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      elements.dropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        elements.dropZone.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      elements.dropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        elements.dropZone.classList.remove("dragover");
+      });
+    });
+
+    elements.dropZone.addEventListener("drop", (event) => {
+      const file = event.dataTransfer.files[0];
+      handleFile(file);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeModal();
+    });
+
+    if (!getConfig().uploadPreset) {
+      setTimeout(openModal, 450);
+    }
+  </script>
+</body>
+</html>
